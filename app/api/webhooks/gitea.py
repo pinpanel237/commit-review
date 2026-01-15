@@ -1,7 +1,10 @@
 import logging
 import os
+from textwrap import dedent
+
 import httpx
 
+from app.domain.code_review_list import CodeReviewResult
 from app.domain.commit import Commit
 from fastapi import Request, APIRouter
 
@@ -35,7 +38,7 @@ async def getWebhook(request: Request):
 
         return responses
 
-async def get_diff(llm, commits: list[Commit]) -> list[dict[str, str]]:
+async def get_diff(llm, commits: list[Commit]) -> str:
     responses = []
     headers = {
         "Authorization": f"token {GITEA_TOKEN}",
@@ -50,11 +53,40 @@ async def get_diff(llm, commits: list[Commit]) -> list[dict[str, str]]:
 
             if diff_response.status_code == 200:
                 logger.info(diff_response.text)
-                code_review_list = await llm.review_code(diff_response.text)
-                responses.append(code_review_list)
+                code_review_result = await llm.review_code(diff_response.text)
+                responses.append(code_review_result)
 
-        return responses
+        await createIssues(llm, c.id, responses)
 
-async def createIssue(llm, body):
-    model_name = llm.model
-    # title = f"Auto review from {model_name} - {}"
+        return "개선 이슈 등록 완료"
+
+async def createIssues(llm, commit_id, llm_responses: list[CodeReviewResult]):
+    create_issue_url = f"http://{GITEA_URL}/api/v1/repos/{GITEA_REPO}/issues"
+    headers = {
+        "Authorization": f"token {GITEA_TOKEN}",
+        "Accept": "application/json"
+    }
+
+    async with httpx.AsyncClient() as client:
+        for response in llm_responses:
+            body = {
+                "title": response.issue_title,
+                "body": dedent(f"""
+                        **이슈사항**
+                        
+                        {response.issues}
+                    
+                        **개선추천**
+                        
+                        {response.improvements}
+                        
+                        **해당 커밋**
+                        {commit_id}
+                        
+                        해당 이슈는 {llm.model}를 사용하여 자동으로 작성되었습니다.
+                    """).strip(),
+                "closed": False,
+            }
+            issue_response = await client.post(create_issue_url, headers=headers, json=body)
+            if issue_response.status_code == 201:
+                logger.info(issue_response.text)

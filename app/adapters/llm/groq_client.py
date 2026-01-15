@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 class GroqClient(LLMClient):
     def __init__(self,
-                 model: str = "openai/gpt-oss-120b",
+                 model: str = "llama-3.3-70b-versatile",
                  temperature: float = 0.0,
                  max_tokens: int = 1024,
                  api_key: Optional[str] = None,
@@ -36,7 +36,7 @@ class GroqClient(LLMClient):
                 2. (issue_title) 위 개선점들을 종합하여 Git 이슈 제목 하나를 생성한다.
                 
                 규칙:
-                - 이슈사항(issues)과 개선추천(improvements)은 300자 이내로 번호를 붙이지 않고 상세하게 작성한다.
+                - 이슈사항(issues)과 개선추천(improvements)은 번호를 붙이지 않고 상세하게 작성한다.
                 - 이슈 제목(issue_title)은 60자 이내로 작성한다.
                 - 이슈 제목(issue_title) 맨 앞에 내용에 따라 대괄호 안에 Bug, Feature request, Enhancement, Refactor 
                 중 하나를 선택하여 반드시 기입한다.

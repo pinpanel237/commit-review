@@ -2,10 +2,10 @@ import logging
 import os
 import httpx
 
+from app.domain.commit import Commit
 from fastapi import Request, APIRouter
 
 from app.adapters.gitea.parser import extract_commits_from_push
-from app.domain.commit import Commit
 
 GITEA_URL = os.getenv("GITEA_URL")
 GITEA_REPO = os.getenv("GITEA_REPO")
@@ -31,21 +31,26 @@ async def getWebhook(request: Request):
         return "No push event"
     else:
         llm = request.app.state.llm
-        headers = {
-            "Authorization": f"token {GITEA_TOKEN}",
-            "Accept": "application/json"
-        }
-        responses = []
+        responses = await get_diff(llm, commits)
 
-        async with httpx.AsyncClient() as client:
-            for c in commits:
-                diff_url = f"http://{GITEA_URL}/api/v1/repos/{GITEA_REPO}/git/commits/{c.id}.diff"
-                logger.info(diff_url)
-                diff_response = await client.get(diff_url, headers=headers)
+        return responses
 
-                if diff_response.status_code == 200:
-                    logger.info(diff_response.text)
-                    response = await llm.review_code(diff_response.text)
-                    responses.append({"id": c.id, "review": response})
+async def get_diff(llm, commits: list[Commit]) -> list[dict[str, str]]:
+    responses = []
+    headers = {
+        "Authorization": f"token {GITEA_TOKEN}",
+        "Accept": "application/json"
+    }
+
+    async with httpx.AsyncClient() as client:
+        for c in commits:
+            diff_url = f"http://{GITEA_URL}/api/v1/repos/{GITEA_REPO}/git/commits/{c.id}.diff"
+            logger.info(diff_url)
+            diff_response = await client.get(diff_url, headers=headers)
+
+            if diff_response.status_code == 200:
+                logger.info(diff_response.text)
+                response = await llm.review_code(diff_response.text)
+                responses.append({"id": c.id, "review": response})
 
         return responses

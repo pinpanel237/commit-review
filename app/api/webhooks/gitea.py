@@ -50,7 +50,11 @@ async def get_diff(llm, commits: list[Commit]) -> list[dict[str, str]]:
 
             if diff_response.status_code == 200:
                 logger.info(diff_response.text)
-                response = await llm.review_code(diff_response.text)
-                responses.append({"id": c.id, "review": response})
+                code_review_list = await llm.review_code(diff_response.text)
+                responses.append(code_review_list)
 
         return responses
+
+async def createIssue(llm, body):
+    model_name = llm.model
+    # title = f"Auto review from {model_name} - {}"

@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 from fastapi import FastAPI
 
-from app.adapters.llm.groqClient import GroqClient
+from app.adapters.llm.groq_client import GroqClient
 
 load_dotenv()
 

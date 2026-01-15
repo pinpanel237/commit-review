@@ -1,7 +1,13 @@
-from app.domain.commit import Push
+from app.domain.commit import Commit
 
-def extract_push(payload: dict) -> Push:
-    return Push(
-        before=payload.get("before", ""),
-        after=payload.get("after", ""),
-    )
+def extract_commits_from_push(payload: dict) -> list[Commit]:
+    commits = []
+
+    for c in payload.get("commits", []):
+        commits.append(
+            Commit(
+                id=c.get("id")
+            )
+        )
+
+    return commits
